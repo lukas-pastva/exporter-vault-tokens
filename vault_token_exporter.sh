@@ -11,8 +11,15 @@ PORT=9100
 query_token_expiration() {
     local description=$1
     local accessor=$2
+
+    # Authenticate with Vault using the Kubernetes service account token
+    local jwt=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+    local vault_token_response=$(curl -s --request POST --data "{\"jwt\": \"$jwt\", \"role\": \"${ROLE_NAME}sys-vault-token-exporter\"}" $VAULT_ADDR/v1/auth/kubernetes/login)
+    local vault_token=$(echo $vault_token_response | jq -r '.auth.client_token')
+
+    # Use the vault_token for the API request
     local response=$(curl -s \
-        --header "X-Vault-Token: $VAULT_TOKEN" \
+        --header "X-Vault-Token: $vault_token" \
         --request POST \
         --data "{\"accessor\":\"$accessor\"}" \
         "$VAULT_ADDR/v1/auth/token/lookup-accessor")

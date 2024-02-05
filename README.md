@@ -17,7 +17,9 @@ Usge
     tokenDescription2:accessor2
     ```
 - to use metrics, just navigate to port 
-- Required ENV var: VAULT_ADDR
+- Required ENV var: 
+  - VAULT_ADDR - the adress of Hashicorp Vault server
+  - ROLE_NAME - The name of the role the pod is using when authneticating towards Vault
 
 
 License
