@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # Configuration
-# This should be defined in ENV: VAULT_ADDR
+VAULT_ADDR="${VAULT_ADDR:-http://127.0.0.1:8200}" # Default Vault address if not set
 VAULT_TOKEN=$(cat "/vault/secrets/vault-token")
 ACCESSORS_FILE="/vault/secrets/vault-accessors"
 METRICS_FILE="/tmp/vault_token_expiration.prom"
+PORT=9100
 
 # Function to query Vault for a token's expiration using its accessor and write to the metrics file
 query_token_expiration() {
@@ -31,7 +32,7 @@ query_token_expiration() {
     fi
 }
 
-# Main logic
+# Generate metrics before starting the server
 echo "# HELP vault_token_expiration_time_seconds The expiration time of Vault tokens in seconds from now." > $METRICS_FILE
 echo "# TYPE vault_token_expiration_time_seconds gauge" >> $METRICS_FILE
 
@@ -39,8 +40,7 @@ while IFS=: read -r description accessor || [[ -n "$description" ]]; do
     query_token_expiration "$description" "$accessor"
 done < "$ACCESSORS_FILE"
 
-# Serve the metrics using socat, properly formatting as HTTP response
+# Serve the metrics using nc
 while true; do
-    socat TCP-LISTEN:9100,reuseaddr,fork SYSTEM:"echo -ne 'HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4; charset=utf-8\r\n\r\n'; cat $METRICS_FILE" &
-    wait $!
+    { echo -ne "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n"; cat $METRICS_FILE; } | nc -l -p $PORT -q 1
 done
