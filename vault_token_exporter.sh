@@ -19,11 +19,19 @@ query_token_expiration() {
 
     local expire_time=$(echo $response | jq -r '.data.expire_time')
 
-    if [ "$expire_time" != "null" ]; then
+    if [[ "$expire_time" != "null" && "$expire_time" != "" ]]; then
+        # Truncate the timestamp to remove nanoseconds
+        expire_time=$(echo $expire_time | sed 's/\.[0-9]\{1,\}Z/Z/')
+
         # Convert expiration time to epoch and calculate remaining seconds
-        local expiration_epoch=$(date --date="$expire_time" +%s)
-        local current_epoch=$(date +%s)
+        local expiration_epoch=$(date -u --date="$expire_time" +%s)
+        local current_epoch=$(date -u +%s)
         local remaining_seconds=$((expiration_epoch - current_epoch))
+
+        # Check if the calculation resulted in a negative number
+        if [[ "$remaining_seconds" -lt 0 ]]; then
+            remaining_seconds=0 # Set to 0 to avoid negative values
+        fi
 
         # Write the metric
         echo "vault_token_expiration_time_seconds{description=\"$description\", accessor=\"$accessor\"} $remaining_seconds" >> $METRICS_FILE
