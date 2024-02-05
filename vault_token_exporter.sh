@@ -39,8 +39,8 @@ while IFS=: read -r description accessor || [[ -n "$description" ]]; do
     query_token_expiration "$description" "$accessor"
 done < "$ACCESSORS_FILE"
 
-# Serve the metrics using socat
+# Serve the metrics using socat, properly formatting as HTTP response
 while true; do
-    socat -v TCP-LISTEN:9100,reuseaddr,fork SYSTEM:"cat $METRICS_FILE" &
+    socat TCP-LISTEN:9100,reuseaddr,fork SYSTEM:"echo -ne 'HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4; charset=utf-8\r\n\r\n'; cat $METRICS_FILE" &
     wait $!
 done
