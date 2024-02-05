@@ -35,7 +35,7 @@ query_token_expiration() {
 echo "# HELP vault_token_expiration_time_seconds The expiration time of Vault tokens in seconds from now." > $METRICS_FILE
 echo "# TYPE vault_token_expiration_time_seconds gauge" >> $METRICS_FILE
 
-while IFS=: read -r description accessor; do
+while IFS=: read -r description accessor || [[ -n "$description" ]]; do
     query_token_expiration "$description" "$accessor"
 done < "$ACCESSORS_FILE"
 
