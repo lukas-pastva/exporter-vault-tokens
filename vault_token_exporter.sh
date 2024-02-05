@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-VAULT_ADDR="${VAULT_ADDR:-http://127.0.0.1:8200}" # Default Vault address if not set
+VAULT_ADDR="${VAULT_ADDR:-http://127.0.0.1:8200}"  # Default Vault address if not set
 VAULT_TOKEN=$(cat "/vault/secrets/vault-token")
 ACCESSORS_FILE="/vault/secrets/vault-accessors"
 METRICS_FILE="/tmp/vault_token_expiration.prom"
@@ -19,18 +19,15 @@ query_token_expiration() {
 
     local expire_time=$(echo $response | jq -r '.data.expire_time')
 
-    if [[ "$expire_time" != "null" && "$expire_time" != "" ]]; then
-        # Truncate the timestamp to remove nanoseconds
-        expire_time=$(echo $expire_time | sed 's/\.[0-9]\{1,\}Z/Z/')
-
-        # Convert expiration time to epoch and calculate remaining seconds
-        local expiration_epoch=$(date -u --date="$expire_time" +%s)
+    if [[ "$expire_time" != "null" && -n "$expire_time" ]]; then
+        # Convert ISO 8601 date to epoch seconds using awk
+        local expiration_epoch=$(echo $expire_time | awk -F "[-T:Z]" '{print mktime($1" "$2" "$3" "$4" "$5" "$6)}')
         local current_epoch=$(date -u +%s)
         local remaining_seconds=$((expiration_epoch - current_epoch))
 
-        # Check if the calculation resulted in a negative number
+        # Prevent negative remaining time
         if [[ "$remaining_seconds" -lt 0 ]]; then
-            remaining_seconds=0 # Set to 0 to avoid negative values
+            remaining_seconds=0
         fi
 
         # Write the metric
