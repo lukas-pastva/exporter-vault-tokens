@@ -38,9 +38,9 @@ query_token_expiration() {
         fi
 
         # Write the metric
-        echo "vault_token_expiration_time_seconds{description=\"$description\", accessor=\"$accessor\"} $remaining_seconds" >> $METRICS_FILE
+        echo "vault_token_expiration_time_seconds{description=\"$description\"} $remaining_seconds" >> $METRICS_FILE
     else
-        echo "vault_token_expiration_time_seconds{description=\"$description\", accessor=\"$accessor\", error=\"lookup_failed\"} -1" >> $METRICS_FILE
+        echo "vault_token_expiration_time_seconds{description=\"$description\", error=\"lookup_failed\"} -1" >> $METRICS_FILE
     fi
 }
 
