@@ -40,7 +40,7 @@ while IFS=: read -r description accessor || [[ -n "$description" ]]; do
     query_token_expiration "$description" "$accessor"
 done < "$ACCESSORS_FILE"
 
-# Serve the metrics using nc
+# Serve the metrics using nc, without -q option, looping to accept one connection at a time
 while true; do
-    { echo -ne "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n"; cat $METRICS_FILE; } | nc -l -p $PORT -q 1
+    { echo -ne "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n"; cat $METRICS_FILE; } | nc -l -p $PORT
 done
