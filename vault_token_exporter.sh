@@ -14,7 +14,7 @@ query_token_expiration() {
 
     # Authenticate with Vault using the Kubernetes service account token
     local jwt=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-    local vault_token_response=$(curl -s --request POST --data "{\"jwt\": \"$jwt\", \"role\": \"${ROLE_NAME}sys-vault-token-exporter\"}" $VAULT_ADDR/v1/auth/kubernetes/login)
+    local vault_token_response=$(curl -s --request POST --data "{\"jwt\": \"$jwt\", \"role\": \"${ROLE_NAME}\"}" $VAULT_ADDR/v1/auth/kubernetes/login)
     local vault_token=$(echo $vault_token_response | jq -r '.auth.client_token')
 
     # Use the vault_token for the API request
