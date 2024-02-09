@@ -44,15 +44,16 @@ query_token_expiration() {
     fi
 }
 
-# Generate metrics before starting the server
-echo "# HELP vault_token_expiration_time_seconds The expiration time of Vault tokens in seconds from now." > $METRICS_FILE
-echo "# TYPE vault_token_expiration_time_seconds gauge" >> $METRICS_FILE
-
-while IFS=: read -r description accessor || [[ -n "$description" ]]; do
-    query_token_expiration "$description" "$accessor"
-done < "$ACCESSORS_FILE"
-
 # Serve the metrics using nc, without -q option, looping to accept one connection at a time
 while true; do
+    # Clear the metrics file for fresh data
+    echo "# HELP vault_token_expiration_time_seconds The expiration time of Vault tokens in seconds from now." > $METRICS_FILE
+    echo "# TYPE vault_token_expiration_time_seconds gauge" >> $METRICS_FILE
+
+    while IFS=: read -r description accessor || [[ -n "$description" ]]; do
+        query_token_expiration "$description" "$accessor"
+    done < "$ACCESSORS_FILE"
+
+    # Serve the freshly generated metrics
     { echo -ne "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n"; cat $METRICS_FILE; } | nc -l -p $PORT
 done
