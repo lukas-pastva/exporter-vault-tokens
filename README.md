@@ -8,8 +8,7 @@ TLDR: Are You using Hashicorp Vault and them tokens expire and You dont know whe
 Usge
 ==================
 
-- Preferred way to use is on k8s with binding two files
-- /vault/secrets/vault-token
+- Preferred way to use is on k8s with binding file
 - /vault/secrets/vault-accessors
 - the accessors file format is:
     ```
