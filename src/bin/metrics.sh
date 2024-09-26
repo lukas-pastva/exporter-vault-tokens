@@ -35,15 +35,22 @@ safe_curl() {
     local url="$1"
     local method="${2:-GET}"
     local data="${3:-}"
-    local headers=("${@:4}")
-    local retries=3
-    local wait_time=2
+    shift 3
+    local headers=("$@")
+    local retries=1
+    local wait_time=1
+
+    # Prefix each header with -H
+    local curl_headers=()
+    for header in "${headers[@]}"; do
+        curl_headers+=("-H" "$header")
+    done
 
     for i in $(seq 1 "$retries"); do
         # Log the request
         echo "$method $url" >> /tmp/curl_requests.log
         # Perform the request
-        response=$(curl -k -s -f -X "$method" "${headers[@]}" "$url" -d "$data")
+        response=$(curl -k -s -f -X "$method" "${curl_headers[@]}" "$url" -d "$data")
         local exit_status=$?
         if [[ $exit_status -eq 0 ]]; then
             echo "$response"
@@ -56,6 +63,7 @@ safe_curl() {
     echo "$url" >> /tmp/curl_failures.log
     return 1
 }
+
 
 # Function to authenticate with Vault using Kubernetes service account token
 authenticate_vault() {
@@ -135,11 +143,6 @@ serve_metrics() {
         # Add a heartbeat metric
         metric_add "vault_heart_beat{vault=\"${VAULT_ADDR}\"} $(date +%s)"
 
-        # Serve the metrics over HTTP using Netcat
-        {
-            echo -ne "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n"
-            cat "$METRICS_FILE"
-        } | nc -l -p "$PORT" -q 1
     done
 }
 
