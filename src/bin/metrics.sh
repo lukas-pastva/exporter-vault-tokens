@@ -10,8 +10,6 @@ PORT=9100
 ROLE_NAME="${ROLE_NAME:-your_role_name}"
 SERVICE_ACCOUNT_TOKEN_PATH="/var/run/secrets/kubernetes.io/serviceaccount/token"
 
- 
-
 # Function to escape label values
 escape_label_value() {
     local val="$1"
