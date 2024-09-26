@@ -80,7 +80,7 @@ func ensureLogFileExists() {
 	filePath := "/tmp/metrics.log"
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		currentTime := time.Now().Unix()
-		content := fmt.Sprintf("o2_gitlab_heart_beat %d\n", currentTime)
+		content := fmt.Sprintf("heart_beat %d\n", currentTime)
 		err := os.WriteFile(filePath, []byte(content), 0644)
 		if err != nil {
 			fmt.Printf("Error creating %s: %v\n", filePath, err)
