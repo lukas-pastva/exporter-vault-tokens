@@ -5,7 +5,7 @@ Vault token exporter is a Prometheus exporter
 
 TLDR: Are You using Hashicorp Vault and them tokens expire and You dont know when to expect that horrible situation? Look no further, with our Vault token exporter 3000 You can call now and get it for free! Yes You heard that right! Free of charge! That is 0800-for-free-token-exporter!
 
-Usge
+Usage
 ==================
 
 - Preferred way to use is on k8s with binding file
