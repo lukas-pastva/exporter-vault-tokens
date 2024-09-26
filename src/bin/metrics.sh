@@ -138,7 +138,7 @@ collect_metrics() {
     done < "$ACCESSORS_FILE"
 
     # Add a heartbeat metric
-    metric_add "vault_heart_beat{vault=\"${VAULT_ADDR}\"} $(date +%s)"
+    metric_add "vault_heart_beat $(date +%s)"
 }
 
 # Initialize logs
