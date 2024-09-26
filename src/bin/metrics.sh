@@ -1,12 +1,11 @@
 #!/bin/bash
 
-# set -euo pipefail
+set -euo pipefail
 
 # Configuration
 VAULT_ADDR="${VAULT_ADDR:-http://127.0.0.1:8200}"
 ACCESSORS_FILE="/vault/secrets/vault-accessors"
 METRICS_FILE="/tmp/metrics.log"
-PORT=9100
 ROLE_NAME="${ROLE_NAME:-your_role_name}"
 SERVICE_ACCOUNT_TOKEN_PATH="/var/run/secrets/kubernetes.io/serviceaccount/token"
 
@@ -64,7 +63,6 @@ safe_curl() {
     return 1
 }
 
-
 # Function to authenticate with Vault using Kubernetes service account token
 authenticate_vault() {
     local jwt
@@ -72,7 +70,7 @@ authenticate_vault() {
     local payload
     payload=$(jq -n --arg jwt "$jwt" --arg role "$ROLE_NAME" '{"jwt": $jwt, "role": $role}')
     local response
-    response=$(safe_curl "$VAULT_ADDR/v1/auth/kubernetes/login" "POST" "$payload" "Content-Type: application/json")
+    response=$(safe_curl "$VAULT_ADDR/v1/auth/kubernetes/login" "POST" "$payload" "-H" "Content-Type: application/json")
     local vault_token
     vault_token=$(echo "$response" | jq -r '.auth.client_token')
     if [[ -z "$vault_token" || "$vault_token" == "null" ]]; then
@@ -91,7 +89,7 @@ query_token_expiration() {
     local payload
     payload=$(jq -n --arg accessor "$accessor" '{"accessor": $accessor}')
     local response
-    response=$(safe_curl "$VAULT_ADDR/v1/auth/token/lookup-accessor" "POST" "$payload" "Content-Type: application/json" "X-Vault-Token: $vault_token") || {
+    response=$(safe_curl "$VAULT_ADDR/v1/auth/token/lookup-accessor" "POST" "$payload" "-H" "Content-Type: application/json" "-H" "X-Vault-Token: $vault_token") || {
         metric_add "vault_token_expiration_time_seconds{description=\"$(escape_label_value "$description")\", error=\"lookup_failed\"} -1"
         return
     }
@@ -125,25 +123,22 @@ initialize_metrics() {
     echo "# TYPE vault_token_expiration_time_seconds gauge" >> "$METRICS_FILE"
 }
 
-# Function to serve metrics via Netcat
-serve_metrics() {
-    while true; do
-        # Clear and initialize the metrics file
-        initialize_metrics
+# Function to collect metrics once
+collect_metrics() {
+    # Clear and initialize the metrics file
+    initialize_metrics
 
-        # Authenticate with Vault
-        local vault_token
-        vault_token=$(authenticate_vault)
+    # Authenticate with Vault
+    local vault_token
+    vault_token=$(authenticate_vault)
 
-        # Read accessors and query their expiration
-        while IFS=: read -r description accessor || [[ -n "$description" ]]; do
-            query_token_expiration "$description" "$accessor" "$vault_token"
-        done < "$ACCESSORS_FILE"
+    # Read accessors and query their expiration
+    while IFS=: read -r description accessor || [[ -n "$description" ]]; do
+        query_token_expiration "$description" "$accessor" "$vault_token"
+    done < "$ACCESSORS_FILE"
 
-        # Add a heartbeat metric
-        metric_add "vault_heart_beat{vault=\"${VAULT_ADDR}\"} $(date +%s)"
-
-    done
+    # Add a heartbeat metric
+    metric_add "vault_heart_beat{vault=\"${VAULT_ADDR}\"} $(date +%s)"
 }
 
 # Initialize logs
@@ -151,5 +146,5 @@ serve_metrics() {
 : > /tmp/curl_requests.log
 : > /tmp/curl_failures.log
 
-# Start serving metrics
-serve_metrics
+# Collect metrics once
+collect_metrics
