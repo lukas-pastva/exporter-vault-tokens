@@ -1,14 +1,5 @@
 #!/bin/bash
 
-set -euo pipefail
-
-# Configuration
-VAULT_ADDR="${VAULT_ADDR:-http://127.0.0.1:8200}"
-ACCESSORS_FILE="/vault/secrets/vault-accessors"
-METRICS_FILE="/tmp/metrics.log"
-ROLE_NAME="${ROLE_NAME:-your_role_name}"
-SERVICE_ACCOUNT_TOKEN_PATH="/var/run/secrets/kubernetes.io/serviceaccount/token"
-
 # Function to escape label values
 escape_label_value() {
     local val="$1"
@@ -66,7 +57,7 @@ safe_curl() {
 # Function to authenticate with Vault using Kubernetes service account token
 authenticate_vault() {
     local jwt
-    jwt=$(cat "$SERVICE_ACCOUNT_TOKEN_PATH")
+    jwt=$(cat "/var/run/secrets/kubernetes.io/serviceaccount/token")
     local payload
     payload=$(jq -n --arg jwt "$jwt" --arg role "$ROLE_NAME" '{"jwt": $jwt, "role": $role}')
     local response
@@ -141,10 +132,21 @@ collect_metrics() {
     metric_add "vault_heart_beat $(date +%s)"
 }
 
-# Initialize logs
-: > /tmp/metrics.log
-: > /tmp/curl_requests.log
-: > /tmp/curl_failures.log
+# set -euo pipefail
+# Configuration
+VAULT_ADDR="${VAULT_ADDR:-http://127.0.0.1:8200}"
+ACCESSORS_FILE="/vault/secrets/vault-accessors"
+METRICS_FILE="/tmp/metrics.log"
+ROLE_NAME="${ROLE_NAME:-your_role_name}"
+CURRENT_MIN=$((10#$(date +%M)))
+RUN_BEFORE_MINUTE=${RUN_BEFORE_MINUTE:-"5"}
 
-# Collect metrics once
-collect_metrics
+if [[ $CURRENT_MIN -lt ${RUN_BEFORE_MINUTE} ]]; then
+    # Initialize logs
+    : > /tmp/metrics.log
+    : > /tmp/curl_requests.log
+    : > /tmp/curl_failures.log
+
+    # Collect metrics once
+    collect_metrics
+fi
