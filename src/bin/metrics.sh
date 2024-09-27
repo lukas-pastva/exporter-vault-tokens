@@ -56,14 +56,10 @@ safe_curl() {
 
 # Function to authenticate with Vault using Kubernetes service account token
 authenticate_vault() {
-    local jwt
-    jwt=$(cat "/var/run/secrets/kubernetes.io/serviceaccount/token")
-    local payload
-    payload=$(jq -n --arg jwt "$jwt" --arg role "$ROLE_NAME" '{"jwt": $jwt, "role": $role}')
-    local response
-    response=$(safe_curl "$VAULT_ADDR/v1/auth/kubernetes/login" "POST" "$payload" "-H" "Content-Type: application/json")
-    local vault_token
-    vault_token=$(echo "$response" | jq -r '.auth.client_token')
+    local jwt=$(cat "/var/run/secrets/kubernetes.io/serviceaccount/token")
+    local payload=$(jq -n --arg jwt "$jwt" --arg role "$ROLE_NAME" '{"jwt": $jwt, "role": $role}')
+    local response=$(safe_curl "$VAULT_ADDR/v1/auth/kubernetes/login" "POST" "$payload" "-H" "Content-Type: application/json")
+    local vault_token=$(echo "$response" | jq -r '.auth.client_token')
     if [[ -z "$vault_token" || "$vault_token" == "null" ]]; then
         echo "Failed to authenticate with Vault." >&2
         exit 1
@@ -77,10 +73,8 @@ query_token_expiration() {
     local accessor="$2"
     local vault_token="$3"
 
-    local payload
-    payload=$(jq -n --arg accessor "$accessor" '{"accessor": $accessor}')
-    local response
-    response=$(safe_curl "$VAULT_ADDR/v1/auth/token/lookup-accessor" "POST" "$payload" "-H" "Content-Type: application/json" "-H" "X-Vault-Token: $vault_token") || {
+    local payload=$(jq -n --arg accessor "$accessor" '{"accessor": $accessor}')
+    local response=$(safe_curl "$VAULT_ADDR/v1/auth/token/lookup-accessor" "POST" "$payload" "-H" "Content-Type: application/json" "-H" "X-Vault-Token: $vault_token") || {
         metric_add "vault_token_expiration_time_seconds{description=\"$(escape_label_value "$description")\", error=\"lookup_failed\"} -1"
         return
     }
@@ -90,10 +84,8 @@ query_token_expiration() {
 
     if [[ "$expire_time" != "null" && -n "$expire_time" ]]; then
         # Convert ISO 8601 date to epoch seconds
-        local expiration_epoch
-        expiration_epoch=$(date -u -d "$expire_time" +"%s")
-        local current_epoch
-        current_epoch=$(date -u +%s)
+        local expiration_epoch=$(date -u -d "$expire_time" +"%s")
+        local current_epoch=$(date -u +%s)
         local remaining_seconds=$((expiration_epoch - current_epoch))
 
         # Prevent negative remaining time
@@ -120,8 +112,7 @@ collect_metrics() {
     initialize_metrics
 
     # Authenticate with Vault
-    local vault_token
-    vault_token=$(authenticate_vault)
+    local vault_token=$(authenticate_vault)
 
     # Read accessors and query their expiration
     while IFS=: read -r description accessor || [[ -n "$description" ]]; do
