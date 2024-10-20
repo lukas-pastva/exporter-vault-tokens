@@ -10,13 +10,13 @@ ENV APP_DIR=/app
 WORKDIR ${APP_DIR}
 
 # Copy go.mod and go.sum files first for better caching
-COPY ./src/go.mod ./src/go.sum ./
+COPY ./go.mod ./go.sum ./
 
 # Download dependencies
 RUN go mod download
 
 # Copy the source code
-COPY ./src/ ./
+COPY ./ ./
 
 # Build the Go application
 RUN go build -o app .
@@ -56,7 +56,7 @@ RUN curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_am
 COPY --from=builder /app/app ${BIN_DIR}/app
 
 # Copy additional binaries (ensure no 'app' directory is present here)
-COPY ./src/bin/ ${BIN_DIR}/
+COPY ./bin/ ${BIN_DIR}/
 
 # Ensure all binaries are executable
 RUN chmod +x ${BIN_DIR}/*
