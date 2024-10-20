@@ -114,10 +114,17 @@ collect_metrics() {
     # Authenticate with Vault
     local vault_token=$(authenticate_vault)
 
-    # Read accessors and query their expiration
-    while IFS=: read -r description accessor || [[ -n "$description" ]]; do
+    # Parse the YAML file and iterate over each token
+    local token_count
+    token_count=$(yq e '.tokens | length' "$CONFIG_FILE")
+
+    for ((i=0; i<token_count; i++)); do
+        local description
+        local accessor
+        description=$(yq e ".tokens[$i].name" "$CONFIG_FILE")
+        accessor=$(yq e ".tokens[$i].accessor" "$CONFIG_FILE")
         query_token_expiration "$description" "$accessor" "$vault_token"
-    done < "$ACCESSORS_FILE"
+    done
 
     # Add a heartbeat metric
     metric_add "vault_heart_beat $(date +%s)"
@@ -126,7 +133,7 @@ collect_metrics() {
 # set -euo pipefail
 # Configuration
 VAULT_ADDR="${VAULT_ADDR:-http://127.0.0.1:8200}"
-ACCESSORS_FILE="/vault/secrets/vault-accessors"
+CONFIG_FILE="/vault/secrets/config.yaml"
 METRICS_FILE="/tmp/metrics.log"
 ROLE_NAME="${ROLE_NAME:-your_role_name}"
 CURRENT_MIN=$((10#$(date +%M)))
